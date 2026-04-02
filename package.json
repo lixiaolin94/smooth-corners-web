@@ -48,12 +48,12 @@
 	"license": "Apache-2.0",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/lixiaolin94/smooth-corners"
+		"url": "https://github.com/lixiaolin94/smooth-corners-web"
 	},
 	"bugs": {
-		"url": "https://github.com/lixiaolin94/smooth-corners/issues"
+		"url": "https://github.com/lixiaolin94/smooth-corners-web/issues"
 	},
-	"homepage": "https://github.com/lixiaolin94/smooth-corners",
+	"homepage": "https://github.com/lixiaolin94/smooth-corners-web",
 	"publishConfig": {
 		"access": "public"
 	}
