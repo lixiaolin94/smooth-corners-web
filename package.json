@@ -1,0 +1,60 @@
+{
+	"name": "@lixiaolin94/smooth-corners",
+	"version": "0.1.0",
+	"description": "Figma-style corner smoothing for CSS. Converts corner radius + smoothing to border-radius + corner-shape: superellipse(K).",
+	"type": "module",
+	"main": "./src/index.js",
+	"types": "./types/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./types/index.d.ts",
+			"default": "./src/index.js"
+		},
+		"./css": {
+			"types": "./types/css.d.ts",
+			"default": "./src/css.js"
+		},
+		"./compute": {
+			"types": "./types/compute.d.ts",
+			"default": "./src/compute.js"
+		},
+		"./observer": {
+			"types": "./types/observer.d.ts",
+			"default": "./src/observer.js"
+		},
+		"./declarative": {
+			"types": "./types/declarative.d.ts",
+			"default": "./src/declarative.js"
+		}
+	},
+	"files": [
+		"src",
+		"types"
+	],
+	"sideEffects": [
+		"./src/declarative.js"
+	],
+	"keywords": [
+		"smooth-corners",
+		"superellipse",
+		"squircle",
+		"corner-shape",
+		"border-radius",
+		"figma",
+		"ios",
+		"css"
+	],
+	"author": "Li Xiaolin",
+	"license": "Apache-2.0",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/lixiaolin94/smooth-corners"
+	},
+	"bugs": {
+		"url": "https://github.com/lixiaolin94/smooth-corners/issues"
+	},
+	"homepage": "https://github.com/lixiaolin94/smooth-corners",
+	"publishConfig": {
+		"access": "public"
+	}
+}

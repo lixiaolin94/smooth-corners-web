@@ -1,0 +1,484 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>smooth-corners — Figma/iOS corner smoothing for CSS</title>
+    <meta name="description" content="smooth-corners converts Figma/iOS corner radius + smoothing into CSS border-radius + corner-shape: superellipse(K)." />
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 760px;
+        margin: 40px auto;
+        padding: 0 20px 48px;
+        line-height: 1.6;
+        color: #111;
+      }
+
+      section {
+        margin-top: 32px;
+      }
+      h1,
+      p,
+      ul,
+      pre {
+        margin-top: 0;
+      }
+      h1 {
+        margin-bottom: 8px;
+      }
+      h2 {
+        margin-top: 0;
+        margin-bottom: 12px;
+      }
+      h3 {
+        margin-top: 24px;
+      }
+      hr {
+        margin: 32px 0;
+        border: 0;
+        border-top: 1px solid #ddd;
+      }
+
+      .header-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 12px;
+      }
+
+      .header-links {
+        display: flex;
+        gap: 12px;
+      }
+
+      code,
+      pre,
+      output {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+
+      code {
+        font-size: 0.95em;
+      }
+
+      pre {
+        background: #f5f5f5;
+        padding: 16px;
+        border-radius: 8px;
+        overflow-x: auto;
+        font-size: 13px;
+      }
+
+      .demo-box {
+        border: 1px solid #ddd;
+        padding: 24px;
+        border-radius: 8px;
+        margin: 16px 0;
+        display: flex;
+        justify-content: center;
+      }
+
+      .demo-shape {
+        width: 180px;
+        height: 120px;
+        background: #0275ff;
+      }
+
+      .status {
+        display: inline-block;
+        font-size: 13px;
+        margin-top: 8px;
+        padding: 2px 8px;
+        border-radius: 4px;
+      }
+
+      .status.supported {
+        color: #15803d;
+        border: 1px solid #15803d;
+      }
+      .status.unsupported {
+        color: #dc2626;
+        border: 1px solid #dc2626;
+      }
+
+      .controls label {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 12px;
+      }
+
+      .controls input[type="range"] {
+        width: 100%;
+        margin-top: 6px;
+      }
+      .metric-list {
+        padding-left: 20px;
+        margin: 16px 0 0;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="header-row">
+        <h1>smooth-corners</h1>
+        <span class="header-links">
+          <a href="https://github.com/lixiaolin94/smooth-corners">GitHub</a>
+          <a href="https://x.com/xiaolinbythesea">Twitter</a>
+        </span>
+      </div>
+      <p>Converts Figma / iOS <code>corner radius + smoothing</code> into CSS <code>border-radius</code> + <code>corner-shape: superellipse(K)</code>.</p>
+      <p class="status" id="support-status"></p>
+    </header>
+
+    <main>
+      <section id="what">
+        <h2>What is Smooth Corner</h2>
+        <p>
+          Standard <code>border-radius</code> draws a circular arc — curvature changes abruptly where the arc meets the straight edge. Figma (Corner Smoothing
+          slider) and iOS (<code>UIBezierPath</code> with <code>.continuous</code> style) replace the circular arc with a superellipse curve, making the
+          curvature transition continuous rather than abrupt. The <code>smoothing</code> parameter controls the extent of this transition (0 = pure circular
+          arc, 1 = maximum smoothing).
+        </p>
+        <p>
+          The new CSS property <code>corner-shape: superellipse(K)</code> natively supports this effect. This library converts design tool
+          <code>radius + smoothing</code> values into the <code>border-radius</code> (compensated value) and <code>corner-shape: superellipse(K)</code> that
+          browsers need.
+        </p>
+      </section>
+
+      <hr />
+
+      <section id="install">
+        <h2>Install</h2>
+        <pre><code>npm i @lixiaolin94/smooth-corners</code></pre>
+        <p>Pure ESM, zero dependencies, no build step. Three APIs available:</p>
+        <ul>
+          <li><strong>CSS Variable API</strong> — Best for most cases. Only needs radius and smoothing. Works with React/Vue components.</li>
+          <li>
+            <strong>Dimension-Aware Compute</strong> — Use when radius may approach half the element's short side. Automatically constrains to prevent overflow.
+          </li>
+          <li><strong>Observer</strong> — Use when you want automatic size tracking. No manual calculation needed.</li>
+        </ul>
+      </section>
+
+      <hr />
+
+      <section id="css-api">
+        <h2>CSS Variable API</h2>
+        <p>
+          <code>smoothCorners(radius, smoothing?)</code> returns a set of CSS custom properties to pair with the <code>.smooth-corners</code> class. The class
+          uses <code>@supports</code> for progressive enhancement: compensated radius + superellipse when <code>corner-shape</code> is supported, original
+          radius as fallback.
+        </p>
+
+        <div class="demo-box">
+          <div class="demo-shape smooth-corners" id="css-demo"></div>
+        </div>
+
+        <p>Add these rules to your global stylesheet (also available via the <code>smoothCornersCSS</code> export):</p>
+        <pre><code>.smooth-corners {
+  border-radius: var(--sc-r);
+}
+@supports (corner-shape: superellipse(2)) {
+  .smooth-corners {
+    border-radius: var(--sc-i);
+    corner-shape: var(--sc-s);
+  }
+}</code></pre>
+
+        <h3>React</h3>
+        <pre><code>import { smoothCorners } from '@lixiaolin94/smooth-corners';
+
+&lt;div className="smooth-corners" style={smoothCorners(30)} /&gt;</code></pre>
+
+        <h3>Vue</h3>
+        <pre><code>import { smoothCorners } from '@lixiaolin94/smooth-corners';
+
+&lt;div class="smooth-corners" :style="smoothCorners(30)" /&gt;</code></pre>
+
+        <h3>Vanilla JS</h3>
+        <pre><code>import { applySmooth, smoothCorners } from '@lixiaolin94/smooth-corners';
+
+applySmooth(element, smoothCorners(30));</code></pre>
+
+        <h3>Return value</h3>
+        <ul>
+          <li><code>--sc-r</code> — Original radius (used for fallback)</li>
+          <li><code>--sc-i</code> — Compensated radius (used with superellipse)</li>
+          <li><code>--sc-s</code> — <code>superellipse(K)</code> value</li>
+        </ul>
+        <p>
+          <code>smoothing</code> defaults to <code>0.6</code> (equivalent to Figma's 60% Corner Smoothing). Set to <code>0</code> for a pure circular arc,
+          <code>1</code> for maximum smoothing.
+        </p>
+      </section>
+
+      <hr />
+
+      <section id="compute-api">
+        <h2>Dimension-Aware Compute</h2>
+        <p>
+          When you know the element's actual dimensions, <code>computeSmoothCorners(width, height, radius, smoothing)</code> gives more accurate results. It
+          clamps the radius to <code>min(width, height) / 2</code>
+          and progressively reduces smoothing to 0 when space is insufficient, preventing adjacent corners from overlapping.
+        </p>
+
+        <div class="demo-box">
+          <div class="demo-shape" id="compute-demo"></div>
+        </div>
+
+        <pre><code>import { computeSmoothCorners } from '@lixiaolin94/smooth-corners';
+
+const result = computeSmoothCorners(180, 120, 30, 0.6);
+// {
+//   radius: 30,             — target corner radius
+//   compensatedRadius: ..., — compensated radius computed by the smoothing algorithm
+//   k: ...,                 — superellipse exponent
+//   smoothing: ...,         — effective smoothing, automatically reduced when space is limited
+// }</code></pre>
+      </section>
+
+      <hr />
+
+      <section id="observer-api">
+        <h2>Observer</h2>
+        <p>
+          The Observer uses <code>computeSmoothCorners</code> under the hood, automatically reading element dimensions and applying CSS custom properties.
+          Supports both declarative (HTML attributes) and programmatic usage. Recalculates automatically when element size changes. Base styles (<code
+            >.smooth-corners</code
+          >
+          rules) are auto-injected on first use — no manual setup required.
+        </p>
+
+        <h3>Declarative</h3>
+        <p>
+          Add the <code>data-smooth-corners</code> attribute to elements, then import <code>smooth-corners/declarative</code>
+          to enable auto-scanning. Addition, removal, and attribute changes are all captured by MutationObserver.
+        </p>
+
+        <div class="demo-box">
+          <div class="demo-shape" data-smooth-corners="30" data-smooth-corners-smoothing="0.6"></div>
+        </div>
+
+        <pre><code>&lt;div data-smooth-corners="30"&gt;...&lt;/div&gt;
+
+&lt;script type="module"&gt;
+  import '@lixiaolin94/smooth-corners/declarative';
+&lt;/script&gt;</code></pre>
+
+        <h3>Programmatic</h3>
+        <p>
+          Use <code>observe(el, opts)</code> / <code>unobserve(el)</code> for direct control over individual elements. For manual lifecycle management, import
+          <code>startAutoObserve()</code> / <code>stopAutoObserve()</code> from <code>smooth-corners/observer</code>.
+        </p>
+
+        <div class="demo-box">
+          <div class="demo-shape" id="programmatic-chip"></div>
+        </div>
+
+        <pre><code>import { observe, unobserve } from '@lixiaolin94/smooth-corners/observer';
+
+observe(el, { radius: 30, smoothing: 0.6 });
+unobserve(el);</code></pre>
+      </section>
+
+      <hr />
+
+      <section id="playground">
+        <h2>Playground</h2>
+        <p>
+          Drag the sliders to see <code>computeSmoothCorners</code> output under different sizes and parameters. Notice how smoothing is automatically
+          compressed as the radius approaches half the short side.
+        </p>
+
+        <div class="controls">
+          <label for="width-range">Width <output id="width-output" for="width-range">220px</output></label>
+          <input type="range" id="width-range" min="72" max="420" step="1" value="220" />
+
+          <label for="height-range">Height <output id="height-output" for="height-range">180px</output></label>
+          <input type="range" id="height-range" min="72" max="320" step="1" value="180" />
+
+          <label for="radius-range">Corner radius <output id="radius-output" for="radius-range">40px</output></label>
+          <input type="range" id="radius-range" min="0" max="160" step="1" value="40" />
+
+          <label for="smoothing-range">Corner smoothing <output id="smoothing-output" for="smoothing-range">0.60</output></label>
+          <input type="range" id="smoothing-range" min="0" max="1" step="0.01" value="0.6" />
+        </div>
+
+        <div class="demo-box">
+          <div class="demo-shape" id="preview-shape"></div>
+        </div>
+
+        <ul class="metric-list">
+          <li>Applied radius: <strong id="metric-radius">0px</strong></li>
+          <li>Compensated radius: <strong id="metric-compensated">0px</strong></li>
+          <li>Resolved smoothing: <strong id="metric-smoothing">0</strong></li>
+          <li>Superellipse K: <strong id="metric-k">fallback</strong></li>
+          <li>
+            Color: <span style="color: #0275ff">&#9632;</span> Smoothing active <span style="color: #f5a623">&#9632;</span> Compressed by space
+            <span style="color: #999">&#9632;</span> No smoothing
+          </li>
+        </ul>
+
+        <h3>Computed CSS</h3>
+        <pre id="computed-css"><code></code></pre>
+
+        <h3>CSS Variable API output</h3>
+        <pre id="vars-css"><code></code></pre>
+      </section>
+
+      <hr />
+
+      <section id="algorithm">
+        <h2>Algorithm</h2>
+        <p>Given original radius <code>r</code> and smoothing <code>s</code>, compute K for <code>corner-shape: superellipse(K)</code>.</p>
+
+        <h3>1. Compensated radius</h3>
+        <p>Smoothing extends the curve outward, requiring a larger border-radius to compensate.</p>
+        <pre><code>compensated = r · (1 + s)</code></pre>
+        <p>The dimension-aware version constrains the extension to available space:</p>
+        <pre><code>extension = min(r · s, limit − r)
+compensated = r + extension</code></pre>
+
+        <h3>2. Superellipse exponent n</h3>
+        <p>The superellipse equation <code>|x|ⁿ + |y|ⁿ = 1</code> gives a circle when n = 2. Solve for n using a closed-form formula:</p>
+        <pre><code>d = 1 − 1/√2 ≈ 0.293
+u = 1 − (r · d) / compensated
+n = ln2 / ln(1/u)</code></pre>
+
+        <h3>3. CSS K value</h3>
+        <p>Map n to the CSS <code>corner-shape</code> parameter:</p>
+        <pre><code>K = log₂(max(2, n))</code></pre>
+      </section>
+
+      <hr />
+
+      <section id="support">
+        <h2>Browser Support</h2>
+        <p><code>corner-shape: superellipse(...)</code> is a new CSS property (Chrome 138+). All APIs in this library use progressive enhancement:</p>
+        <ul>
+          <li><strong>Supported</strong> — Uses compensated radius + <code>superellipse(K)</code> for true smooth corners</li>
+          <li>
+            <strong>Unsupported</strong> — Falls back to original radius with standard <code>border-radius</code>. Corners remain but without the smooth
+            transition.
+          </li>
+        </ul>
+        <p>All APIs use CSS <code>@supports</code> rules for automatic switching. No polyfills or conditional logic required.</p>
+      </section>
+    </main>
+
+    <script type="module">
+      import { applySmooth, computeSmoothCorners, smoothCorners, smoothCornersCSS } from "./src/index.js";
+      import { observe } from "./src/observer.js";
+      import "./src/declarative.js";
+
+      const $ = (id) => document.getElementById(id);
+      const supportsCornerShape = CSS.supports("corner-shape", "superellipse(2)");
+      const fmt = (value) => Number(value).toFixed(2).replace(/\.00$/, "");
+
+      const statusEl = $("support-status");
+      statusEl.textContent = supportsCornerShape ? "corner-shape: supported" : "corner-shape: not supported";
+      statusEl.classList.add(supportsCornerShape ? "supported" : "unsupported");
+
+      // --- Base styles ---
+
+      if (!document.getElementById("smooth-corners-style")) {
+        const style = document.createElement("style");
+        style.id = "smooth-corners-style";
+        style.textContent = smoothCornersCSS;
+        document.head.append(style);
+      }
+
+      // --- CSS variable demo ---
+
+      applySmooth($("css-demo"), smoothCorners(30));
+
+      // --- Compute demo ---
+
+      const computeDemo = $("compute-demo");
+      const computeDemoResult = computeSmoothCorners(180, 120, 30, 0.6);
+      computeDemo.style.borderRadius =
+        supportsCornerShape && computeDemoResult.k !== null ? `${computeDemoResult.compensatedRadius}px` : `${computeDemoResult.radius}px`;
+      computeDemo.style.cornerShape = supportsCornerShape && computeDemoResult.k !== null ? `superellipse(${computeDemoResult.k})` : "";
+
+      if (!supportsCornerShape) {
+        for (const el of document.querySelectorAll(".demo-shape")) {
+          el.style.background = "#999";
+        }
+      }
+
+      // --- Playground ---
+
+      const ranges = {
+        width: $("width-range"),
+        height: $("height-range"),
+        radius: $("radius-range"),
+        smoothing: $("smoothing-range"),
+      };
+
+      const outputs = {
+        width: $("width-output"),
+        height: $("height-output"),
+        radius: $("radius-output"),
+        smoothing: $("smoothing-output"),
+      };
+
+      function updatePlayground() {
+        const width = Number(ranges.width.value);
+        const height = Number(ranges.height.value);
+        const radius = Number(ranges.radius.value);
+        const smoothing = Number(ranges.smoothing.value);
+
+        outputs.width.value = `${width}px`;
+        outputs.height.value = `${height}px`;
+        outputs.radius.value = `${radius}px`;
+        outputs.smoothing.value = smoothing.toFixed(2);
+
+        const result = computeSmoothCorners(width, height, radius, smoothing);
+        const vars = smoothCorners(radius, smoothing);
+        const previewShape = $("preview-shape");
+
+        previewShape.style.width = `${width}px`;
+        previewShape.style.height = `${height}px`;
+
+        if (result.k === null || !supportsCornerShape) {
+          previewShape.style.background = "#999";
+        } else if (result.smoothing < smoothing - 1e-6) {
+          previewShape.style.background = "#F5A623";
+        } else {
+          previewShape.style.background = "#0275FF";
+        }
+
+        if (supportsCornerShape && result.k !== null) {
+          previewShape.style.borderRadius = `${result.compensatedRadius}px`;
+          previewShape.style.cornerShape = `superellipse(${result.k})`;
+        } else {
+          previewShape.style.borderRadius = `${result.radius}px`;
+          previewShape.style.cornerShape = "";
+        }
+
+        $("metric-radius").textContent = `${fmt(result.radius)}px`;
+        $("metric-compensated").textContent = `${fmt(result.compensatedRadius)}px`;
+        $("metric-smoothing").textContent = result.k === null ? "0" : result.smoothing.toFixed(2);
+        $("metric-k").textContent = result.k === null ? "fallback" : fmt(result.k);
+
+        $("computed-css").querySelector("code").textContent =
+          result.k === null
+            ? `.card {\n  width: ${width}px;\n  height: ${height}px;\n  border-radius: ${fmt(result.radius)}px;\n}`
+            : `.card {\n  width: ${width}px;\n  height: ${height}px;\n  border-radius: ${fmt(result.compensatedRadius)}px;\n  corner-shape: superellipse(${fmt(result.k)});\n}\n\n/* fallback */\n.card {\n  border-radius: ${fmt(result.radius)}px;\n}`;
+
+        $("vars-css").querySelector("code").textContent = `const vars = smoothCorners(${radius}, ${smoothing.toFixed(2)});\n\n${JSON.stringify(vars, null, 2)}`;
+      }
+
+      for (const input of Object.values(ranges)) {
+        input.addEventListener("input", updatePlayground);
+      }
+      updatePlayground();
+
+      // --- Observer demo ---
+
+      observe($("programmatic-chip"), { radius: 30 });
+    </script>
+  </body>
+</html>
