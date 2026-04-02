@@ -53,7 +53,7 @@
 	"bugs": {
 		"url": "https://github.com/lixiaolin94/smooth-corners-web/issues"
 	},
-	"homepage": "https://github.com/lixiaolin94/smooth-corners-web",
+	"homepage": "https://lixiaolin94.github.io/smooth-corners-web",
 	"publishConfig": {
 		"access": "public"
 	}
